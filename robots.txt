@@ -1,0 +1,21 @@
+# robots.txt for Muhammad Razi's Portfolio
+
+# Allow all search engines to crawl the main site
+User-agent: *
+Allow: /
+
+# Disallow access to admin or sensitive files (if any exist)
+Disallow: /admin/
+Disallow: /config/
+Disallow: /private/
+Disallow: /backup/
+Disallow: /scripts/
+
+# Exclude unnecessary files
+Disallow: /temp/
+Disallow: /node_modules/
+Disallow: /cgi-bin/
+Disallow: /example-page/
+
+# Sitemap location
+Sitemap: https://yourdomain.com/sitemap.xml
