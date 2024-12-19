@@ -1,3 +1,7 @@
+import { inject } from "@vercel/analytics";
+
+inject();
+
 document.addEventListener("DOMContentLoaded", () => {
     const fadeElements = document.querySelectorAll(".fade-in");
   
