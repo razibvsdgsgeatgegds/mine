@@ -116,13 +116,14 @@ nav ul li a:hover {
   gap: 20px;
 }
 
-
 .gig-card {
   background: #fff;
   border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
   transition: transform 0.3s ease;
+  width: calc(100% - 40px);
+  max-width: 300px;
 }
 
 .gig-card:hover {
@@ -137,7 +138,6 @@ nav ul li a:hover {
 .gig-card h3 {
   margin: 15px 0 10px;
 }
-
 /* About Section */
 #about {
   padding: 80px 20px;
