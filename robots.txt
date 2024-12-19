@@ -18,4 +18,4 @@ Disallow: /cgi-bin/
 Disallow: /example-page/
 
 # Sitemap location
-Sitemap: https://yourdomain.com/sitemap.xml
+Sitemap: https://muhammadrazi.vercel.app/sitemap.xml
