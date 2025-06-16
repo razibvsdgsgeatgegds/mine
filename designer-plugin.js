@@ -28,26 +28,25 @@ class BubbleDesigner {
             showElementTool: true,
             showSizeTool: true,
             showSaveTool: true,
-            showUndoRedo: true, // New option for undo/redo buttons
 
             // Customization
             logoText: 'Bubble Designer',
             logoImage: '',
             primaryColor: '#4A6CF7', // Default value
             fontFamily: 'Poppins',
-            canvasBackgroundColor: '#FFFFFF', // New: Default canvas background color
 
             ...options  // Bubble will override these
         };
         console.log('BubbleDesigner: Final options initialized in constructor:', this.options);
 
         this.stickers = [
-            '😀', '😂', '😍', '🥳', '😎', '🤩', '👍', '❤️', '🔥', '✨',
-            '🚀', '🌈', '💡', '🎉', '🌟', '💫', '💯', '✅', '❌', '❤️‍🔥',
-            '🏆', '👑', '💰', '🎤', '🎧', '💻', '📱', '📚', '🎵', '🎨',
-            '🍔', '🍕', '☕', '🎁', '🎈', '🎂', '🎄', '🎃', '🌸', '🌼'
+            'ðŸ˜€', 'ðŸ˜‚', 'ðŸ˜', 'ðŸ¥³', 'ðŸ˜Ž', 'ðŸ¤©', 'ðŸ‘', 'â¤ï¸', 'ðŸ”¥', 'âœ¨', // Corrected emoji: 'ï¿½' changed to 'ðŸ¥³'
+            'ðŸš€', 'ðŸŒˆ', 'ðŸ’¡', 'ðŸŽ‰', 'ðŸŒŸ', 'ðŸ’«', 'ðŸ’¯', 'âœ…', 'âŒ', 'â¤ï¸â€ðŸ”¥',
+            'ðŸ†', 'ðŸ‘‘', 'ðŸ’¸', 'ðŸŽ¤', 'ðŸŽ§', 'ðŸ’»', 'ðŸ“±', 'ðŸ“š', 'ðŸŽµ', 'ðŸŽ¨',
+            'ðŸ”', 'ðŸ•', 'â˜•', 'ðŸŽ', 'ðŸŽˆ', 'ðŸŽ‚', 'ðŸŽ„', 'ðŸŽƒ', 'ðŸŽ“', 'ðŸŒ¸'
         ];
 
+        // Corrected stock image URL
         this.stockImages = [
             'https://picsum.photos/id/10/300/200', 'https://picsum.photos/id/100/300/200', 'https://picsum.photos/id/1000/300/200',
             'https://picsum.photos/id/1001/300/200', 'https://picsum.photos/id/1002/300/200', 'https://picsum.photos/id/1003/300/200',
@@ -126,13 +125,6 @@ class BubbleDesigner {
 
         this.isCanvasInitialized = false; // Tracks if Fabric.js canvas and main UI are initialized
 
-        // --- Undo/Redo History ---
-        this.history = [];
-        this.historyPointer = -1;
-        this.isRedoing = false;
-        this.isUndoing = false;
-        // --- End Undo/Redo ---
-
         // Initial setup sequence
         this.createStyles();
         this.createHTML();
@@ -146,9 +138,6 @@ class BubbleDesigner {
             this.canvas.dispose(); // Release event listeners and canvas context
             this.canvas = null; // Clear reference
             this.isCanvasInitialized = false; // Reset flag
-            // Clear history on dispose/re-init to prevent state mismatches
-            this.history = [];
-            this.historyPointer = -1;
         }
     }
 
@@ -190,16 +179,6 @@ class BubbleDesigner {
 
         this.initFabric();
         this.setupEventListeners();
-        
-        // Try to load saved canvas state from localStorage
-        const loadedFromStorage = this.loadFromLocalStorage();
-        
-        // If no saved state was loaded, save the initial state
-        if (!loadedFromStorage) {
-            this.saveCanvasState(); // Save initial state after canvas is ready
-        }
-        
-        this.updateUndoRedoButtons(); // Update buttons initially
 
         console.log('BubbleDesigner: Initialized successfully!');
         this.isCanvasInitialized = true;
@@ -353,42 +332,6 @@ class BubbleDesigner {
                 color: ${primaryColor}; /* Dynamic color */
             }
 
-            /* Undo/Redo container moved to top of properties/layers panel */
-            .canvas-controls-top-right {
-                position: relative;
-                display: flex;
-                gap: 8px;
-                z-index: 50;
-                margin-bottom: 10px;
-                margin-top: 5px;
-                justify-content: flex-end;
-            }
-
-            .undo-redo-btn {
-                width: 38px; /* Slightly smaller for top-right */
-                height: 38px;
-                border-radius: 8px;
-                background: rgba(34, 34, 51, 0.8); /* Semi-transparent background */
-                color: #a9b1bf;
-                border: none;
-                cursor: pointer;
-                font-size: 1.1em;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                transition: background 0.2s, color 0.2s, transform 0.1s;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                backdrop-filter: blur(5px); /* Frosted glass effect */
-            }
-            .undo-redo-btn:hover:not(:disabled) {
-                background: ${rgbaPrimary0_2};
-                color: #fff;
-                transform: translateY(-1px);
-            }
-            .undo-redo-btn:active:not(:disabled) { transform: translateY(0); }
-            .undo-redo-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-
             /* Canvas Container Styles */
             .bubble-canvas-container {
                 flex: 1; display: flex; align-items: center; justify-content: center;
@@ -396,12 +339,10 @@ class BubbleDesigner {
                 box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1); min-width: 0;
                 height: 100%; /* Explicitly set height to 100% of its flex parent */
                 overflow: hidden; /* Ensure canvas container also hides overflow if canvas is too big */
-                position: relative; /* For absolutely positioned undo/redo buttons */
             }
             .bubble-canvas-wrapper {
-                background: ${this.options.canvasBackgroundColor}; /* Dynamic canvas background initially set from options */
-                border-radius: 18px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
-                padding: 14px 14px 14px 0px; overflow: hidden; /* Ensures canvas itself doesn't cause overflow */
+                background: #fff; border-radius: 18px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+                padding: 14px; overflow: hidden; /* Ensures canvas itself doesn't cause overflow */
                 max-height: 100%; /* Ensures wrapper scales down if parent is smaller */
                 max-width: 100%;  /* Ensures wrapper scales down if parent is smaller */
                 display: flex; /* Helps center the canvas */
@@ -414,7 +355,7 @@ class BubbleDesigner {
             .bubble-right-sidebar {
                 width: 340px; min-width: 320px; max-width: 400px;
                 background: rgba(34, 34, 51, 0.93); border-radius: 18px;
-                box-shadow: -4px 0 32px 0 rgba(31, 38, 135, 0.13); padding: 20px 18px 20px 18px;
+                box-shadow: -4px 0 32px 0 rgba(31, 38, 135, 0.13); padding: 36px 24px 36px 18px;
                 margin-left: 20px; display: flex; flex-direction: column; align-items: flex-start;
                 z-index: 30;
                 height: 100%; /* Make it fill the height of .bubble-main */
@@ -424,7 +365,7 @@ class BubbleDesigner {
 
             /* Right Sidebar Tabs */
             .sidebar-tabs {
-                display: flex; width: 100%; margin-bottom: 10px; background: rgba(30, 30, 45, 0.94);
+                display: flex; width: 100%; margin-bottom: 15px; background: rgba(30, 30, 45, 0.94);
                 border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); flex-shrink: 0;
             }
             .sidebar-tab-btn {
@@ -438,18 +379,18 @@ class BubbleDesigner {
             /* Tab Content Panels - Use visibility/opacity for no reflow */
             .properties-panel, .layers-panel {
                 display: flex; visibility: hidden; opacity: 0; width: 100%;
-                padding: 20px 14px 18px 14px; background: rgba(44, 44, 66, 0.98);
+                padding: 28px 14px 18px 14px; background: rgba(44, 44, 66, 0.98);
                 border-radius: 16px; box-shadow: 0 2px 16px 0 rgba(0, 0, 0, 0.05);
                 min-width: 0; color: #fff; font-family: 'Poppins', sans-serif; margin: 0;
-                flex-direction: column; gap: 14px; box-sizing: border-box; max-height: calc(100% - 60px);
+                flex-direction: column; gap: 16px; box-sizing: border-box; max-height: 100%;
                 overflow-y: auto; scrollbar-width: thin; scrollbar-color: ${primaryColor} #292947; /* Dynamic scrollbar color */
                 position: absolute; /* Positioned relative to .bubble-right-sidebar */
-                top: 60px; left: 18px; right: 18px; bottom: 18px; /* Cover full area of parent below tabs with margins */
+                top: 70px; left: 0; right: 0; bottom: 0; /* Cover full area of parent below tabs */
                 height: auto; /* Let content dictate height, but respect parent bounds */
             }
-            .properties-panel.active, .layers-panel.active { 
-                visibility: visible; opacity: 1; transition: opacity 0.2s ease-in-out; 
-                margin-top: 67px; margin-left: 1px; width: 302px; 
+            .properties-panel.active, .layers-panel.active {
+                visibility: visible; opacity: 1; transition: opacity 0.2s ease-in-out;
+                margin-top: 39px;
             }
 
             /* Scrollbar styling for panels */
@@ -463,23 +404,19 @@ class BubbleDesigner {
             }
             .property-group {
                 margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid #35354c;
-                width: 100%; box-sizing: border-box;
             }
             .property-group:last-child {
                 border-bottom: none; margin-bottom: 0;
             }
             .property-row {
                 display: flex; align-items: center; margin-bottom: 10px; gap: 10px;
-                width: 100%; box-sizing: border-box; flex-wrap: nowrap;
             }
             .property-label {
-                min-width: 70px; width: 70px; color: #b3b3c6; font-size: 0.98em;
-                white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+                min-width: 70px; color: #b3b3c6; font-size: 0.98em;
             }
             .property-input[type="number"], .property-input[type="text"], .property-input[type="color"], .property-input select {
                 flex: 1; border: none; outline: none; border-radius: 6px; padding: 6px 8px; background: #292947;
                 color: #fff; font-size: 1em; box-sizing: border-box; transition: background 0.2s, box-shadow 0.2s;
-                min-width: 0; max-width: 100%; width: calc(100% - 80px);
             }
             .property-input[type="number"]:focus, .property-input[type="text"]:focus, .property-input[type="color"]:focus, .property-input select:focus {
                 background: #35354c; box-shadow: 0 0 0 2px ${primaryColor};
@@ -509,181 +446,19 @@ class BubbleDesigner {
                 width: 18px; height: 18px; accent-color: ${primaryColor};
                 cursor: pointer;
             }
-
-            /* New: Color/Gradient Switch (for objects) */
-            .color-type-toggle {
-                display: flex;
-                border-radius: 6px;
-                overflow: hidden;
-                margin-bottom: 10px;
-                width: 100%;
-                box-sizing: border-box;
-            }
-            .color-type-toggle button {
-                flex: 1;
-                padding: 6px 0;
-                background: #292947;
-                color: #b3b3c6;
-                border: none;
-                cursor: pointer;
-                font-size: 0.9em;
-                font-weight: 600;
-                transition: background 0.2s, color 0.2s;
-            }
-            .color-type-toggle button.active {
-                background: ${primaryColor};
-                color: #fff;
-            }
-            .color-type-toggle button:hover:not(.active) {
-                background: #35354c;
-            }
-
-            .gradient-options {
-                display: none; /* Hidden by default */
-                flex-direction: column;
-                gap: 8px;
-                margin-top: 10px;
-                padding-top: 10px;
-                border-top: 1px solid #35354c;
-                width: 100%;
-                box-sizing: border-box;
-            }
-            .gradient-options.active {
-                display: flex;
-            }
-            .gradient-color-input {
-                flex: 1;
-                padding: 4px;
-                border-radius: 4px;
-                border: 1px solid #35354c;
-                background: #292947;
-            }
-            .gradient-color-row {
-                display: flex;
-                gap: 8px;
-                align-items: center;
-                width: 100%;
-                box-sizing: border-box;
-                flex-wrap: nowrap;
-            }
-            .gradient-add-stop-btn {
-                background: ${primaryColor};
-                color: #fff;
-                border: none;
-                border-radius: 4px;
-                padding: 5px 10px;
-                cursor: pointer;
-                font-size: 0.8em;
-                transition: background 0.2s;
-            }
-            .gradient-add-stop-btn:hover { background: ${darkenPrimary10}; }
-            .gradient-remove-stop-btn {
-                background: none;
-                border: none;
-                color: #ff4d4f;
-                font-size: 1.2em;
-                cursor: pointer;
-                transition: color 0.2s;
-            }
-            .gradient-remove-stop-btn:hover {
-                color: #e63946;
-            }
-
-            /* New: Canvas Background Fill Style controls */
-            .canvas-color-type-toggle {
-                display: flex;
-                border-radius: 6px;
-                overflow: hidden;
-                margin-bottom: 10px;
-                width: 100%;
-                box-sizing: border-box;
-            }
-            .canvas-color-type-toggle button {
-                flex: 1;
-                padding: 6px 0;
-                background: #292947;
-                color: #b3b3c6;
-                border: none;
-                cursor: pointer;
-                font-size: 0.9em;
-                font-weight: 600;
-                transition: background 0.2s, color 0.2s;
-            }
-            .canvas-color-type-toggle button.active {
-                background: ${primaryColor};
-                color: #fff;
-            }
-            .canvas-color-type-toggle button:hover:not(.active) {
-                background: #35354c;
-            }
-
-            .canvas-gradient-options {
-                display: none; /* Hidden by default */
-                flex-direction: column;
-                gap: 8px;
-                margin-top: 10px;
-                padding-top: 10px;
-                border-top: 1px solid #35354c;
-                width: 100%;
-                box-sizing: border-box;
-            }
-            .canvas-gradient-options.active {
-                display: flex;
-            }
-            .canvas-gradient-color-input {
-                flex: 1;
-                padding: 4px;
-                border-radius: 4px;
-                border: 1px solid #35354c;
-                background: #292947;
-            }
-            .canvas-gradient-color-row {
-                display: flex;
-                gap: 8px;
-                align-items: center;
-                width: 100%;
-                box-sizing: border-box;
-                flex-wrap: nowrap;
-            }
-            .canvas-gradient-add-stop-btn {
-                background: ${primaryColor};
-                color: #fff;
-                border: none;
-                border-radius: 4px;
-                padding: 5px 10px;
-                cursor: pointer;
-                font-size: 0.8em;
-                transition: background 0.2s;
-            }
-            .canvas-gradient-add-stop-btn:hover { background: ${darkenPrimary10}; }
-            .canvas-gradient-remove-stop-btn {
-                background: none;
-                border: none;
-                color: #ff4d4f;
-                font-size: 1.2em;
-                cursor: pointer;
-                transition: color 0.2s;
-            }
-            .canvas-gradient-remove-stop-btn:hover {
-                color: #e63946;
-            }
-
-
             .property-delete-btn {
                 background: #ff4d4f; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; cursor: pointer;
-                font-weight: 600; font-size: 0.95em; display: inline-flex; align-items: center; justify-content: center; gap: 8px; 
-                transition: background 0.2s, transform 0.1s; max-width: 100%; box-sizing: border-box;
+                font-weight: 600; font-size: 0.95em; display: flex; align-items: center; gap: 8px; transition: background 0.2s, transform 0.1s;
             }
             .property-delete-btn:hover { background: #e63946; transform: translateY(-1px); }
             .property-delete-btn:active { transform: translateY(0); }
 
             /* LAYER PANEL STYLES */
-            .layers-panel .layer-list { flex-grow: 1; padding-top: 10px; width: 100%; box-sizing: border-box; }
+            .layers-panel .layer-list { flex-grow: 1; padding-top: 10px; }
             .layer-list-item {
                 display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: #292947;
                 border-radius: 6px; margin-bottom: 8px; color: #e0e0e0; font-size: 0.9em; cursor: pointer;
                 transition: background 0.15s, border 0.15s; border: 1px solid transparent; user-select: none;
-                width: 100%; box-sizing: border-box;
             }
             .layer-list-item:hover { background: #35354c; }
             .layer-list-item.selected { background: ${rgbaPrimary0_15}; border: 1px solid ${primaryColor}; }
@@ -700,12 +475,10 @@ class BubbleDesigner {
             .layer-controls {
                 display: flex; justify-content: space-around; gap: 10px; margin-top: 15px;
                 padding-top: 10px; border-top: 1px solid #35354c; flex-shrink: 0;
-                width: 100%; box-sizing: border-box;
             }
             .layer-control-btn {
                 font-size: 0.9em; padding: 8px 12px; border-radius: 8px; background: ${primaryColor};
                 color: #fff; border: none; cursor: pointer; transition: background 0.2s, transform 0.1s;
-                flex: 1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
             }
             .layer-control-btn:hover { background: ${darkenPrimary10}; transform: translateY(-1px); }
 
@@ -826,6 +599,9 @@ class BubbleDesigner {
             .media-panel-options button:hover {
                 background: ${darkenPrimary10};
                 transform: translateY(-2px);
+            }
+            .media-panel-options button i {
+                font-size: 1.2em;
             }
             .media-panel-options .or-separator {
                 text-align: center;
@@ -963,7 +739,7 @@ class BubbleDesigner {
 
         const container = document.getElementById(this.options.container);
         if (!container) {
-            console.error("❌ Container not found:", this.options.container, ". This is critical. Ensure it's appended by Bubble's initialize and available.");
+            console.error("âŒ Container not found:", this.options.container, ". This is critical. Ensure it's appended by Bubble's initialize and available.");
             return; // This return is important if container is not found.
         }
         container.className = 'bubble-designer'; // Assign the main class for styling
@@ -1001,23 +777,12 @@ class BubbleDesigner {
                 </div>
 
                 <div class="bubble-canvas-container">
-                    <div class="bubble-canvas-wrapper" style="background-color: ${this.options.canvasBackgroundColor};">
-                        <canvas id="design-canvas" width="${this.options.width}" height="${this.options.height}"></canvas>
+                    <div class="bubble-canvas-wrapper">
+                        <canvas id="design-canvas" width="${this.options.width}" height="${this.options.height}" style="width: 100%; height: 100%;"></canvas>
                     </div>
-
                 </div>
 
                 <div class="bubble-right-sidebar">
-                    ${this.options.showUndoRedo ? `
-                        <div class="canvas-controls-top-right">
-                            <button class="undo-redo-btn" id="undoBtn" title="Undo">
-                                <i class="fas fa-undo"></i>
-                            </button>
-                            <button class="undo-redo-btn" id="redoBtn" title="Redo">
-                                <i class="fas fa-redo"></i>
-                            </button>
-                        </div>
-                    ` : ''}
                     <div class="sidebar-tabs">
                         <button class="sidebar-tab-btn active" data-tab="properties" id="properties-tab-btn">Properties</button>
                         <button class="sidebar-tab-btn" data-tab="layers" id="layers-tab-btn">Layers</button>
@@ -1162,7 +927,8 @@ class BubbleDesigner {
             this.canvas = new fabric.Canvas('design-canvas', {
                 width: this.options.width,
                 height: this.options.height,
-                backgroundColor: this.options.canvasBackgroundColor // Set initial background color
+                // Set background to null for transparency by default
+                backgroundColor: null 
             });
             console.log('BubbleDesigner: Fabric.js canvas created successfully with dimensions:', this.canvas.width, 'x', this.canvas.height);
             const canvasElement = document.getElementById('design-canvas');
@@ -1210,42 +976,16 @@ class BubbleDesigner {
         });
 
         this.canvas.on('selection:cleared', this.clearPropertiesPanel.bind(this));
-        
-        // --- History Logic Integration ---
-        // Listen for canvas modified events to save state
-        this.canvas.on('object:modified', () => {
-            if (!this.isUndoing && !this.isRedoing) {
-                this.saveCanvasState();
-            }
-            this.updatePropertiesPanel(); // Still update UI
-        });
-        this.canvas.on('object:added', () => {
-            if (!this.isUndoing && !this.isRedoing) {
-                this.saveCanvasState();
-            }
-            this.updateLayersPanel();
-        });
-        this.canvas.on('object:removed', () => {
-            if (!this.isUndoing && !this.isRedoing) {
-                this.saveCanvasState();
-            }
-            this.updateLayersPanel();
-        });
-        // --- End History Logic Integration ---
-
+        this.canvas.on('object:modified', this.updatePropertiesPanel.bind(this));
         // Live updates for position, scale, rotation during drag/resize
         this.canvas.on('object:moving', this.updatePropertiesPanel.bind(this));
         this.canvas.on('object:scaling', this.updatePropertiesPanel.bind(this));
         this.canvas.on('object:rotating', this.updatePropertiesPanel.bind(this));
-        
-        // Show canvas properties when clicking on empty canvas areas
-        this.canvas.on('mouse:down', (e) => {
-            // If clicked on empty canvas (no target) or on canvas background
-            if (!e.target) {
-                this.clearPropertiesPanel(); // This will show canvas properties
-                this.switchRightSidebarTab('properties'); // Switch to properties tab
-            }
-        });
+
+        // Listen for object added/removed to update layers panel
+        this.canvas.on('object:added', this.updateLayersPanel.bind(this));
+        this.canvas.on('object:removed', this.updateLayersPanel.bind(this));
+        this.canvas.on('object:modified', this.updateLayersPanel.bind(this));
 
         this.updateLayersPanel(); // Initial update of layers panel after canvas content is ready
     }
@@ -1287,14 +1027,6 @@ class BubbleDesigner {
         if (this.options.showSaveTool) {
             const saveBtn = document.querySelector('.save-btn');
             if (saveBtn) saveBtn.onclick = () => this.openExportModal();
-        }
-
-        // --- Undo/Redo Buttons ---
-        if (this.options.showUndoRedo) {
-            const undoBtn = document.getElementById('undoBtn');
-            const redoBtn = document.getElementById('redoBtn');
-            if (undoBtn) undoBtn.onclick = () => this.undo();
-            if (redoBtn) redoBtn.onclick = () => this.redo();
         }
 
 
@@ -1455,8 +1187,6 @@ class BubbleDesigner {
         const primaryColorRGB = this._hexToRgba(this.options.primaryColor, 0.85);
 
         msgBox.textContent = message;
-        
-        // Use error color for error messages, primary color for all other message types (success, info, etc.)
         msgBox.style.backgroundColor = type === 'error' ? 'rgba(255, 77, 79, 0.85)' : primaryColorRGB;
         msgBox.style.borderLeftColor = type === 'error' ? '#ff4d4f' : this.options.primaryColor;
         msgBox.style.opacity = 1;
@@ -1469,19 +1199,11 @@ class BubbleDesigner {
     /** Starts a new canvas: clears current content and opens size modal. */
     startNewCanvas() {
         this.canvas.clear();
-        // Reset background to default or previously set color
-        this.canvas.backgroundColor = this.options.canvasBackgroundColor; // Ensure this is explicitly set
-        // Update the wrapper background to ensure consistency
-        const canvasWrapper = document.querySelector('.bubble-canvas-wrapper');
-        if (canvasWrapper) {
-            canvasWrapper.style.backgroundColor = this.options.canvasBackgroundColor;
-        }
-
-        this.canvas.renderAll();
-        this.clearPropertiesPanel(); // This will also update canvas properties panel
+        // Set background to null for transparency when starting new canvas
+        this.canvas.setBackgroundColor(null, this.canvas.renderAll.bind(this.canvas));
+        this.clearPropertiesPanel();
         this.updateLayersPanel();
         this.openNewCanvasModal();
-        this.saveCanvasState(); // Save state after clearing
         this._showMessage('New canvas started!', 'success');
     }
 
@@ -1512,18 +1234,12 @@ class BubbleDesigner {
         // Canvas is already initialized, just resize and clear
         this.canvas.clear();
         this.canvas.setDimensions({ width: width, height: height });
-        this.canvas.backgroundColor = this.options.canvasBackgroundColor; // Ensure background color is reapplied
-        // Update the wrapper background to ensure consistency
-        const canvasWrapper = document.querySelector('.bubble-canvas-wrapper');
-        if (canvasWrapper) {
-            canvasWrapper.style.backgroundColor = this.options.canvasBackgroundColor;
-        }
-        this.canvas.renderAll();
+        // Ensure background is null (transparent) unless explicitly set otherwise
+        this.canvas.setBackgroundColor(null, this.canvas.renderAll.bind(this.canvas));
 
         this.clearPropertiesPanel();
         this.updateLayersPanel();
         document.getElementById('canvasSizeModal').style.display = 'none';
-        this.saveCanvasState(); // Save state after resizing
         this._showMessage(`Canvas resized to ${width}x${height}`, 'success');
     }
 
@@ -1566,10 +1282,13 @@ class BubbleDesigner {
         try {
             switch (format) {
                 case 'png':
+                    // For PNG export, ensure background is transparent unless it's a solid object
                     dataURL = this.canvas.toDataURL({
                         format: 'png',
                         multiplier: scale,
-                        enableRetinaScaling: true,
+                        enableRetinaScaling: true, // Improve quality on high-DPI screens
+                        // If canvas has an explicit backgroundColor set, it will be included.
+                        // If null (default from fix), it will be transparent.
                     });
                     this._downloadFile(dataURL, fileName + '.png');
                     break;
@@ -1579,7 +1298,7 @@ class BubbleDesigner {
                         multiplier: scale,
                         quality: quality,
                         backgroundColor: this.canvas.backgroundColor || '#FFFFFF', // Fallback to white for JPEG if transparent
-                        enableRetinaScaling: true,
+                        enableRetinaScaling: true, // Improve quality on high-DPI screens
                     });
                     this._downloadFile(dataURL, fileName + '.jpeg');
                     break;
@@ -1610,16 +1329,14 @@ class BubbleDesigner {
         document.body.removeChild(link);
     }
 
-    /** Adds a new text object to the canvas, centering it. */
+    /** Adds a new text object to the canvas. */
     addText() {
+        const center = this.canvas.getCenter();
         const text = new fabric.IText('Double click to edit', {
-            fontFamily: this.options.fontFamily, fontSize: 32, fill: '#000000',
+            left: center.left, top: center.top, fontFamily: this.options.fontFamily, fontSize: 32, fill: '#000000', // Default text color to black for contrast
             originX: 'center', originY: 'center', type: 'text', id: 'text-' + Date.now()
         });
-        this.canvas.add(text);
-        this.centerObject(text); // Center the object
-        this.canvas.setActiveObject(text);
-        this.canvas.renderAll();
+        this.canvas.add(text); this.canvas.setActiveObject(text); this.canvas.renderAll();
         this._showMessage('Text added', 'success');
     }
 
@@ -1699,43 +1416,40 @@ class BubbleDesigner {
                     const elementType = item.dataset.elementType;
                     const elementName = item.dataset.elementName;
                     const elementSides = parseInt(item.dataset.elementSides); // For polygons
+                    const center = this.canvas.getCenter();
+                    // Use random color from updated shapeColors
                     const fillColor = this.shapeColors[Math.floor(Math.random() * this.shapeColors.length)];
 
-                    let newObject;
                     switch(elementType) {
-                        case 'icon': newObject = this.addIconElement(elementName, fillColor, false); break;
-                        case 'circle': newObject = this._addBasicShape('circle', fillColor, false); break;
-                        case 'rect': newObject = this._addBasicShape('rect', fillColor, false); break;
-                        case 'roundedRect': newObject = this._addBasicShape('roundedRect', fillColor, false); break;
-                        case 'triangle': newObject = this._addBasicShape('triangle', fillColor, false); break;
-                        case 'line': newObject = this._addBasicShape('line', fillColor, false); break;
-                        case 'arrow': newObject = this._addBasicShape('arrow', fillColor, false); break;
-                        case 'heart': newObject = this._addBasicShape('heart', fillColor, false); break;
-                        case 'diamond': newObject = this._addBasicShape('diamond', fillColor, false); break;
-                        case 'polygon': newObject = this._addBasicShape('polygon', fillColor, false, elementSides); break;
-                        case 'star': newObject = this._addBasicShape('star', fillColor, false); break;
-                        case 'cloud': newObject = this._addPathShape('cloud', fillColor, false); break;
-                        case 'sun': newObject = this._addPathShape('sun', fillColor, false); break;
-                        case 'moon': newObject = this._addPathShape('moon', fillColor, false); break;
-                        default: console.log('Add custom element:', elementType); return;
+                        case 'icon': this.addIconElement(elementName, fillColor); break; // Pass element name which maps to icon in this.elements
+                        case 'circle': this._addBasicShape('circle', center, fillColor); break;
+                        case 'rect': this._addBasicShape('rect', center, fillColor); break;
+                        case 'roundedRect': this._addBasicShape('roundedRect', center, fillColor); break;
+                        case 'triangle': this._addBasicShape('triangle', center, fillColor); break;
+                        case 'line': this._addBasicShape('line', center, fillColor); break;
+                        case 'arrow': this. _addBasicShape('arrow', center, fillColor); break;
+                        case 'heart': this._addBasicShape('heart', center, fillColor); break;
+                        case 'diamond': this._addBasicShape('diamond', center, fillColor); break;
+                        case 'polygon': this._addBasicShape('polygon', center, fillColor, elementSides); break;
+                        case 'star': this._addBasicShape('star', center, fillColor); break; // Star is a path now
+                        case 'cloud': this._addPathShape('cloud', center, fillColor); break;
+                        case 'sun': this._addPathShape('sun', center, fillColor); break;
+                        case 'moon': this._addPathShape('moon', center, fillColor); break;
+                        default: console.log('Add custom element:', elementType);
                     }
-                    if (newObject) {
-                        this.canvas.add(newObject);
-                        this.centerObject(newObject); // Center the object
-                        this.canvas.setActiveObject(newObject);
-                        this.canvas.renderAll();
-                        panel.classList.remove('open');
-                        this._showMessage(`${elementName} added`, 'success');
-                    }
+                    this.canvas.renderAll();
+                    panel.classList.remove('open');
+                    this._showMessage(`${elementName} added`, 'success');
                 };
             });
         }
     }
 
     /** Helper for basic shapes (rect, circle, triangle, etc.) and simple paths (star). */
-    _addBasicShape(type, fillColor, doNotCenter = false, sides = 0) {
+    _addBasicShape(type, center, fillColor, sides = 0) {
         let shape;
         const options = {
+            left: center.left, top: center.top,
             fill: fillColor,
             originX: 'center', originY: 'center',
             type: type, // Store original type
@@ -1750,27 +1464,30 @@ class BubbleDesigner {
                 shape = new fabric.Rect({ ...options, width: 120, height: 80, rx: 18, ry: 18 });
                 break;
             case 'circle':
-                shape = new fabric.Circle({ ...options, radius: 55 });
+                shape = new fabric.Circle({ ...options, radius: 50 });
                 break;
             case 'triangle':
                 shape = new fabric.Triangle({ ...options, width: 100, height: 90 });
                 break;
             case 'line':
-                shape = new fabric.Line([-75, 0, 75, 0], { // Start from 0,0 relative to object center
+                shape = new fabric.Line([center.left - 75, center.top, center.left + 75, center.top], {
                     stroke: fillColor, strokeWidth: 5, originX: 'center', originY: 'center', type: 'line', id: 'line-' + Date.now()
                 });
                 break;
             case 'arrow':
+                // Simple SVG path for an arrow
                 shape = new fabric.Path('M 0 40 L 60 40 L 60 20 L 100 60 L 60 100 L 60 80 L 0 80 Z', {
                     ...options, width: 100, height: 80, scaleX: 1, scaleY: 1
                 });
                 break;
             case 'heart':
+                // Simple SVG path for a heart
                 shape = new fabric.Path('M 50 30 A 20 20 0 0 1 90 30 Q 90 60 50 90 Q 10 60 10 30 A 20 20 0 0 1 50 30 Z', {
                     ...options, width: 100, height: 90, scaleX: 1, scaleY: 1
                 });
                 break;
             case 'diamond':
+                // Simple SVG path for a diamond
                 shape = new fabric.Polygon([
                     {x: 50, y: 0}, {x: 100, y: 50}, {x: 50, y: 100}, {x: 0, y: 50}
                 ], {
@@ -1796,6 +1513,7 @@ class BubbleDesigner {
                 });
                 break;
             case 'star':
+                // A simple 5-point star path (you can make this more complex if desired)
                 shape = new fabric.Path('M 50 0 L 61.8 35.3 L 97.6 35.3 L 68.2 57.7 L 79.1 92.7 L 50 70.3 L 20.9 92.7 L 31.8 57.7 L 2.4 35.3 L 38.2 35.3 Z', {
                     ...options, width: 100, height: 92.7
                 });
@@ -1804,23 +1522,22 @@ class BubbleDesigner {
                 console.warn(`Unknown basic shape type: ${type}`);
                 return;
         }
-
-        if (!doNotCenter) {
-            const center = this.canvas.getCenter();
-            shape.set({ left: center.left, top: center.top });
-        }
-        return shape;
+        this.canvas.add(shape);
+        this.canvas.setActiveObject(shape);
     }
 
-    /** Adds an icon element (Font Awesome) as a text object, centering it. */
-    addIconElement(iconNameFromElement, color, doNotCenter = false) {
+    /** Adds an icon element (Font Awesome) as a text object. */
+    addIconElement(iconNameFromElement, color) {
+        // Find the actual icon class from the this.elements array based on the name
         const elementDefinition = this.elements.find(el => el.name === iconNameFromElement && el.type === 'icon');
         if (!elementDefinition) {
             console.error(`Icon definition not found for name: ${iconNameFromElement}`);
             this._showMessage(`Could not add icon: ${iconNameFromElement}`, 'error');
-            return null;
+            return;
         }
 
+        // A small mapping from the Font Awesome class suffix to its Unicode.
+        // In a real app, you'd use a more robust Font Awesome JS library to get unicode.
         const iconUnicodeMap = {
             'star': '\uf005', 'bell': '\uf0f3', 'home': '\uf015', 'building': '\uf1ad',
             'car': '\uf1b9', 'plane': '\uf072', 'bicycle': '\uf206', 'tree': '\uf1bb',
@@ -1830,30 +1547,30 @@ class BubbleDesigner {
             'folder': '\uf07b', 'file-alt': '\uf15c', 'cog': '\uf013', 'puzzle-piece': '\uf12e',
             'bolt': '\uf0e7', 'tint': '\uf043', 'crown': '\uf521', 'shield-alt': '\uf3ed',
             'flag': '\uf024', 'map-pin': '\uf041', 'wifi': '\uf1eb', 'battery-full': '\uf240',
+            // Note: cloud, sun, moon are now _addPathShape, but kept here for completeness if needed as font icons
             'cloud': '\uf0c2', 'sun': '\uf185', 'moon': '\uf186'
         };
-        const iconClassSuffix = elementDefinition.icon.split(' ').pop().replace('fa-', '');
-        const unicodeChar = iconUnicodeMap[iconClassSuffix] || '\uf005';
+        const iconClassSuffix = elementDefinition.icon.split(' ').pop().replace('fa-', ''); // e.g., 'star' from 'fas fa-star'
+        const unicodeChar = iconUnicodeMap[iconClassSuffix] || '\uf005'; // Default to a star if not found
 
+        const center = this.canvas.getCenter();
         const iconText = new fabric.IText(unicodeChar, {
-            fontFamily: 'Font Awesome 6 Free',
-            fontWeight: '900',
+            left: center.left, top: center.top,
+            fontFamily: 'Font Awesome 6 Free', // Use the correct Font Awesome font family
+            fontWeight: '900', // Solid icons typically need fontWeight 900
             fontSize: 80,
             fill: color,
             originX: 'center', originY: 'center',
-            type: 'icon',
+            type: 'icon', // Custom type to distinguish from regular text
             id: `icon-${iconClassSuffix}-${Date.now()}`
         });
-
-        if (!doNotCenter) {
-            const center = this.canvas.getCenter();
-            iconText.set({ left: center.left, top: center.top });
-        }
-        return iconText;
+        this.canvas.add(iconText);
+        this.canvas.setActiveObject(iconText);
+        this.canvas.renderAll();
     }
 
-    // Helper for complex SVG path-based shapes (cloud, sun, moon etc.), centering them.
-    _addPathShape(type, fillColor, doNotCenter = false) {
+    // Helper for complex SVG path-based shapes (cloud, sun, moon etc.)
+    _addPathShape(type, center, fillColor) {
         let pathData = '';
         let defaultWidth = 100;
         let defaultHeight = 100;
@@ -1873,10 +1590,11 @@ class BubbleDesigner {
                 break;
             default:
                 console.warn(`Unknown path shape type: ${type}`);
-                return null;
+                return;
         }
 
         const path = new fabric.Path(pathData, {
+            left: center.left, top: center.top,
             fill: fillColor,
             scaleX: 1, scaleY: 1,
             originX: 'center', originY: 'center',
@@ -1884,83 +1602,35 @@ class BubbleDesigner {
             id: `${type}-${Date.now()}`
         });
 
+        // Scale path to a reasonable default size if it's too large/small initially
         const bounds = path.getBoundingRect();
         const scale = Math.min(defaultWidth / bounds.width, defaultHeight / bounds.height);
         path.scale(scale);
-
-        if (!doNotCenter) {
-            const center = this.canvas.getCenter();
-            path.set({ left: center.left, top: center.top });
-        }
-        return path;
+        this.canvas.add(path);
+        this.canvas.setActiveObject(path);
     }
 
 
-    /** Adds an image, centering it. */
+    /** Adds an image. */
     addImage(dataUrl) {
         fabric.Image.fromURL(dataUrl, (img) => {
-            img.set({ originX: 'center', originY: 'center', type: 'image', id: 'image-' + Date.now() });
+            const center = this.canvas.getCenter(); img.set({ left: center.left, top: center.top, originX: 'center', originY: 'center', type: 'image', id: 'image-' + Date.now() });
             const maxWidth = this.canvas.width * 0.4; const maxHeight = this.canvas.height * 0.4; let scale = 1;
             if (img.width > maxWidth || img.height > maxHeight) { scale = Math.min(maxWidth / img.width, maxHeight / img.height); }
-            img.scale(scale);
-            this.canvas.add(img);
-            this.centerObject(img); // Center the object
-            this.canvas.setActiveObject(img); img.bringToFront(); this.canvas.renderAll();
+            img.scale(scale); this.canvas.add(img); this.canvas.setActiveObject(img); img.bringToFront(); this.canvas.renderAll();
             this._showMessage('Image added', 'success');
         }, { crossOrigin: 'anonymous' });
     }
 
-    /** Adds an emoji sticker, centering it. */
+    /** Adds an emoji sticker. */
     addSticker(emoji) {
+        const center = this.canvas.getCenter();
         const text = new fabric.Text(emoji, {
-            fontSize: 64, fontFamily: 'Segoe UI Emoji, Arial',
+            left: center.left, top: center.top, fontSize: 64, fontFamily: 'Segoe UI Emoji, Arial', // Use Segoe UI Emoji for better cross-platform support
             type: 'sticker', originX: 'center', originY: 'center', id: 'sticker-' + Date.now()
         });
-        this.canvas.add(text);
-        this.centerObject(text); // Center the object
-        this.canvas.setActiveObject(text); text.bringToFront(); this.canvas.renderAll();
+        this.canvas.add(text); this.canvas.setActiveObject(text); text.bringToFront(); this.canvas.renderAll();
         this._showMessage(`Sticker ${emoji} added`, 'success');
-    }
-
-    /** Centers a Fabric.js object on the canvas with fixed x-coordinate. */
-    centerObject(obj) {
-        // Skip centering if this object was loaded from localStorage
-        // This check prevents overriding saved positions
-        if (obj._loadedFromStorage) {
-            return;
-        }
-        
-        const center = this.canvas.getCenter();
-        
-        // Set the object position with fixed x-coordinate of 414 and vertical center
-        obj.set({
-            left: 414, // Fixed x-coordinate as requested
-            top: center.top,
-            originX: 'center',
-            originY: 'center'
-        });
-        
-        // Update coordinates to ensure proper positioning
-        obj.setCoords();
-        
-        // Render immediately
-        this.canvas.renderAll();
-        
-        // Force additional renders with slight delays to ensure proper centering
-        // This helps with complex objects that might need additional time to fully initialize
-        setTimeout(() => {
-            // Reconfirm position with fixed x-coordinate
-            obj.set({
-                left: 414, // Maintain fixed x-coordinate
-                top: center.top
-            });
-            obj.setCoords();
-            this.canvas.renderAll();
-        }, 10);
-        
-        setTimeout(() => {
-            this.canvas.renderAll();
-        }, 50);
     }
 
     /** Switches the active tab in the right sidebar. */
@@ -1984,58 +1654,9 @@ class BubbleDesigner {
         const panel = document.getElementById('properties-panel');
         const activeObject = this.canvas.getActiveObject();
         if (!panel) return;
-
         if (!activeObject) {
-            // If no object is selected, show canvas properties
-            const isCanvasGradient = this.canvas.backgroundColor && typeof this.canvas.backgroundColor === 'object';
-            panel.innerHTML = `
-                <div class="property-group">
-                    <h4>Canvas Properties</h4>
-                    <div class="canvas-color-type-toggle">
-                        <button class="flat-color-toggle ${!isCanvasGradient ? 'active' : ''}" data-canvas-color-type="flat">Flat Color</button>
-                        <button class="gradient-color-toggle ${isCanvasGradient ? 'active' : ''}" data-canvas-color-type="gradient">Gradient</button>
-                    </div>
-                    <div class="canvas-flat-color-options ${!isCanvasGradient ? 'active' : ''}">
-                        <div class="property-row">
-                            <span class="property-label">Background</span>
-                            <input type="color" class="property-input" data-property="canvasBackgroundColor" value="${this.rgbToHex(this.canvas.backgroundColor && typeof this.canvas.backgroundColor === 'string' ? this.canvas.backgroundColor : (this.options.canvasBackgroundColor || '#FFFFFF'))}">
-                        </div>
-                    </div>
-                    <div class="canvas-gradient-options ${isCanvasGradient ? 'active' : ''}">
-                        <div class="property-row">
-                            <span class="property-label">Type</span>
-                            <select class="property-input" data-property="canvasGradientType">
-                                <option value="linear" ${this.canvas.backgroundColor?.type === 'linear' ? 'selected' : ''}>Linear</option>
-                                <option value="radial" ${this.canvas.backgroundColor?.type === 'radial' ? 'selected' : ''}>Radial</option>
-                            </select>
-                        </div>
-                        <div id="canvas-gradient-stops-container">
-                            ${this.getCanvasGradientStopsHtml(this.canvas.backgroundColor)}
-                        </div>
-                        <button class="canvas-gradient-add-stop-btn">Add Stop</button>
-                    </div>
-                    <div class="property-row">
-                        <span class="property-label">Width</span>
-                        <input type="number" class="property-input" data-property="canvasWidth" value="${this.canvas.width}">
-                    </div>
-                    <div class="property-row">
-                        <span class="property-label">Height</span>
-                        <input type="number" class="property-input" data-property="canvasHeight" value="${this.canvas.height}">
-                    </div>
-                </div>
-            `;
-            // Add listeners for canvas properties
-            panel.querySelector('[data-property="canvasBackgroundColor"]')?.addEventListener('change', this.handleCanvasPropertyChange.bind(this));
-            panel.querySelector('[data-property="canvasWidth"]')?.addEventListener('change', this.handleCanvasPropertyChange.bind(this));
-            panel.querySelector('[data-property="canvasHeight"]')?.addEventListener('change', this.handleCanvasPropertyChange.bind(this));
-
-            // Listeners for canvas color/gradient toggle
-            panel.querySelector('.canvas-color-type-toggle .flat-color-toggle')?.addEventListener('click', () => this.toggleCanvasFillType('flat'));
-            panel.querySelector('.canvas-color-type-toggle .gradient-color-toggle')?.addEventListener('click', () => this.toggleCanvasFillType('gradient'));
-            panel.querySelector('.canvas-gradient-add-stop-btn')?.addEventListener('click', this.addCanvasGradientStop.bind(this));
-            this.setupCanvasGradientStopListeners(); // Setup listeners for gradient stops
-
-            return; // Exit if canvas properties are being shown
+            panel.innerHTML = '<p style="text-align:center; color:#b3b3c6; padding-top:20px;">Select an element to edit its properties</p>';
+            return;
         }
 
         let html = `<div class="property-group"><h4>Selected: ${activeObject.type.charAt(0).toUpperCase() + activeObject.type.slice(1)}</h4>
@@ -2048,79 +1669,30 @@ class BubbleDesigner {
             <div class="property-row"><span class="property-label">Lock Position</span><input type="checkbox" class="property-input" data-property="lockMovement" ${activeObject.lockMovementX && activeObject.lockMovementY ? 'checked' : ''}></div>
             <div class="property-row"><span class="property-label">Lock Scale</span><input type="checkbox" class="property-input" data-property="lockScaling" ${activeObject.lockScalingX && activeObject.lockScalingY ? 'checked' : ''}></div></div>`;
 
-        if (activeObject.type === 'text' || activeObject.type === 'i-text' || activeObject.type === 'icon' || ['rect', 'circle', 'triangle', 'polygon', 'path', 'line', 'star', 'arrow', 'heart', 'diamond', 'cloud', 'sun', 'moon', 'roundedRect'].includes(activeObject.type)) {
-            // Color/Gradient selection
-            const isGradient = activeObject.fill && typeof activeObject.fill === 'object';
-            html += `
-                <div class="property-group">
-                    <h4>Fill Style</h4>
-                    <div class="color-type-toggle">
-                        <button class="flat-color-toggle ${!isGradient ? 'active' : ''}" data-color-type="flat">Flat Color</button>
-                        <button class="gradient-color-toggle ${isGradient ? 'active' : ''}" data-color-type="gradient">Gradient</button>
-                    </div>
-                    <div class="flat-color-options ${!isGradient ? 'active' : ''}">
-                        <div class="property-row">
-                            <span class="property-label">Color</span>
-                            <input type="color" class="property-input" data-property="fill" value="${this.rgbToHex(activeObject.fill && typeof activeObject.fill === 'string' ? activeObject.fill : (this.options.primaryColor || '#000000'))}">
-                        </div>
-                    </div>
-                    <div class="gradient-options ${isGradient ? 'active' : ''}">
-                        <div class="property-row">
-                            <span class="property-label">Type</span>
-                            <select class="property-input" data-property="gradientType">
-                                <option value="linear" ${activeObject.fill?.type === 'linear' ? 'selected' : ''}>Linear</option>
-                                <option value="radial" ${activeObject.fill?.type === 'radial' ? 'selected' : ''}>Radial</option>
-                            </select>
-                        </div>
-                        <div id="gradient-stops-container">
-                            ${this.getGradientStopsHtml(activeObject.fill)}
-                        </div>
-                        <button class="gradient-add-stop-btn">Add Stop</button>
-                    </div>
-                </div>`;
-            // Add stroke options for applicable types
-            if (['rect', 'circle', 'triangle', 'polygon', 'path', 'line', 'star', 'arrow', 'heart', 'diamond', 'cloud', 'sun', 'moon', 'roundedRect'].includes(activeObject.type)) {
-                html += `
-                    <div class="property-group">
-                        <h4>Stroke Style</h4>
-                        <div class="property-row">
-                            <span class="property-label">Stroke</span>
-                            <input type="color" class="property-input" data-property="stroke" value="${this.rgbToHex(activeObject.stroke || this._darkenHex(this.options.primaryColor, 10))}">
-                        </div>
-                        <div class="property-row">
-                            <span class="property-label">Width</span>
-                            <input type="number" class="property-input" data-property="strokeWidth" value="${activeObject.strokeWidth ?? 0}">
-                        </div>
-                    </div>`;
-            }
-        }
-
         if (activeObject.type === 'text' || activeObject.type === 'i-text' || activeObject.type === 'sticker' || activeObject.type === 'icon') {
-            // Different handling for stickers vs other text elements
-            if (activeObject.type === 'sticker') {
-                // For stickers, only show size option, no color or other text options
-                html += `<div class="property-group"><h4>Sticker</h4>
-                    <div class="property-row"><span class="property-label">Size</span><input type="number" class="property-input" data-property="fontSize" value="${activeObject.fontSize ?? 64}"></div>
-                </div>`;
-            } else {
-                // For regular text and icons
-                html += `<div class="property-group"><h4>Text/Icon</h4><div class="property-row"><span class="property-label">Content</span><input type="text" class="property-input" data-property="text" value="${activeObject.text ?? ''}"></div>
-                    <div class="property-row"><span class="property-label">Font Size</span><input type="number" class="property-input" data-property="fontSize" value="${activeObject.fontSize ?? 24}"></div>`;
-                if (activeObject.type === 'text' || activeObject.type === 'i-text') {
-                    html += `<div class="property-row"><span class="property-label">Font Family</span>${this.getFontDropdown('fontFamily', activeObject.fontFamily ?? 'Poppins')}</div>`;
-                }
-                html += `<div class="property-row"><span class="property-label">Align</span><select class="property-input" data-property="textAlign">
-                        <option value="left" ${activeObject.textAlign === 'left' ? 'selected' : ''}>Left</option><option value="center" ${activeObject.textAlign === 'center' ? 'selected' : ''}>Center</option><option value="right" ${activeObject.textAlign === 'center' ? 'selected' : ''}>Right</option>
-                    </select></div><div class="property-row"><span class="property-label">Padding</span><input type="number" min="0" class="property-input" data-property="padding" value="${activeObject.padding ?? 0}"></div>
-                </div>`;
+            html += `<div class="property-group"><h4>Text/Icon</h4><div class="property-row"><span class="property-label">Content</span><input type="text" class="property-input" data-property="text" value="${activeObject.text ?? ''}"></div>
+                <div class="property-row"><span class="property-label">Font Size</span><input type="number" class="property-input" data-property="fontSize" value="${activeObject.fontSize ?? 24}"></div>`;
+            // Only show font family for actual text objects, not just generic icons/stickers which might be font-awesome or emoji
+            if (activeObject.type === 'text' || activeObject.type === 'i-text') {
+                html += `<div class="property-row"><span class="property-label">Font Family</span>${this.getFontDropdown('fontFamily', activeObject.fontFamily ?? 'Poppins')}</div>`;
             }
+            html += `<div class="property-row"><span class="property-label">Color</span><input type="color" class="property-input" data-property="fill" value="${this.rgbToHex(activeObject.fill || '#000000')}"></div>
+                <div class="property-row"><span class="property-label">Align</span><select class="property-input" data-property="textAlign">
+                    <option value="left" ${activeObject.textAlign === 'left' ? 'selected' : ''}>Left</option><option value="center" ${activeObject.textAlign === 'center' ? 'selected' : ''}>Center</option><option value="right" ${activeObject.textAlign === 'right' ? 'selected' : ''}>Right</option>
+                </select></div><div class="property-row"><span class="property-label">Padding</span><input type="number" min="0" class="property-input" data-property="padding" value="${activeObject.padding ?? 0}"></div>
+            </div>`;
+        }
+        if (['rect', 'circle', 'triangle', 'polygon', 'path', 'line', 'star', 'arrow', 'heart', 'diamond', 'cloud', 'sun', 'moon', 'roundedRect'].includes(activeObject.type)) {
+            html += `<div class="property-group"><h4>Style</h4><div class="property-row"><span class="property-label">Fill</span><input type="color" class="property-input" data-property="fill" value="${this.rgbToHex(activeObject.fill || this.options.primaryColor)}"></div>
+                <div class="property-row"><span class="property-label">Stroke</span><input type="color" class="property-input" data-property="stroke" value="${this.rgbToHex(activeObject.stroke || this._darkenHex(this.options.primaryColor, 10))}"></div>
+                <div class="property-row"><span class="property-label">Stroke Width</span><input type="number" class="property-input" data-property="strokeWidth" value="${activeObject.strokeWidth ?? 0}"></div></div>`;
         }
         if (activeObject.type === 'image') {
             html += `<div class="property-group"><h4>Image</h4><div class="property-row"><span class="property-label">Scale X</span><input type="number" step="0.01" class="property-input" data-property="scaleX" value="${(activeObject.scaleX ?? 1).toFixed(2)}"></div>
                 <div class="property-row"><span class="property-label">Scale Y</span><input type="number" step="0.01" class="property-input" data-property="scaleY" value="${(activeObject.scaleY ?? 1).toFixed(2)}"></div></div>`;
         }
 
-        html += `<div style='text-align:right;margin-top:12px;width:100%;box-sizing:border-box;'><button class="property-delete-btn"><i class="fas fa-trash"></i> Delete</button></div>`;
+        html += `<div style='text-align:right;margin-top:12px;'><button class="property-delete-btn"><i class="fas fa-trash"></i> Delete</button></div>`;
         panel.innerHTML = html;
 
         panel.querySelectorAll('.property-input').forEach(input => {
@@ -2129,355 +1701,7 @@ class BubbleDesigner {
         });
         const delBtn = panel.querySelector('.property-delete-btn');
         if (delBtn) { delBtn.addEventListener('click', () => { this.deleteActiveObject(); }); }
-
-        // Event listeners for object color/gradient toggle
-        panel.querySelector('.flat-color-toggle')?.addEventListener('click', () => this.toggleFillType('flat'));
-        panel.querySelector('.gradient-color-toggle')?.addEventListener('click', () => this.toggleFillType('gradient'));
-        panel.querySelector('.gradient-add-stop-btn')?.addEventListener('click', this.addGradientStop.bind(this));
-        // Initial setup for gradient stop listeners
-        this.setupGradientStopListeners();
     }
-
-    /**
-     * Handles changes to canvas properties (background color, width, height).
-     */
-    handleCanvasPropertyChange(e) {
-        const property = e.target.dataset.property;
-        let value = e.target.value;
-
-        switch (property) {
-            case 'canvasBackgroundColor':
-                this.canvas.backgroundColor = value;
-                // Also update the wrapper's background color for immediate visual feedback
-                const canvasWrapper = document.querySelector('.bubble-canvas-wrapper');
-                if (canvasWrapper) {
-                    canvasWrapper.style.backgroundColor = value;
-                }
-                break;
-            case 'canvasWidth':
-                this.canvas.setWidth(parseInt(value));
-                break;
-            case 'canvasHeight':
-                this.canvas.setHeight(parseInt(value));
-                break;
-        }
-        this.canvas.renderAll();
-        this.saveCanvasState(); // Save state after canvas property change
-        this._showMessage(`Canvas ${property.replace('canvas', '').toLowerCase()} updated!`, 'success');
-    }
-
-    /** Toggles between flat color and gradient fill options for objects. */
-    toggleFillType(type) {
-        const panel = document.getElementById('properties-panel');
-        if (!panel) return;
-        const activeObject = this.canvas.getActiveObject();
-        if (!activeObject) return;
-
-        const flatOptions = panel.querySelector('.flat-color-options');
-        const gradientOptions = panel.querySelector('.gradient-options');
-        const flatToggle = panel.querySelector('.flat-color-toggle');
-        const gradientToggle = panel.querySelector('.gradient-color-toggle');
-
-        flatToggle.classList.remove('active');
-        gradientToggle.classList.remove('active');
-        flatOptions.classList.remove('active');
-        gradientOptions.classList.remove('active');
-
-        if (type === 'flat') {
-            flatToggle.classList.add('active');
-            flatOptions.classList.add('active');
-            // Revert to flat color, use current color if it's already a string, otherwise default
-            activeObject.set('fill', this.rgbToHex(activeObject.fill && typeof activeObject.fill === 'string' ? activeObject.fill : (this.options.primaryColor || '#000000')));
-        } else {
-            gradientToggle.classList.add('active');
-            gradientOptions.classList.add('active');
-            // Initialize a default linear gradient if not already present
-            if (!activeObject.fill || typeof activeObject.fill === 'string') {
-                activeObject.set('fill', new fabric.Gradient({
-                    type: 'linear',
-                    coords: { x1: 0, y1: 0, x2: activeObject.width, y2: 0 },
-                    colorStops: [
-                        { offset: 0, color: this.rgbToHex(this.options.primaryColor) },
-                        { offset: 1, color: this._darkenHex(this.options.primaryColor, 30) }
-                    ]
-                }));
-            }
-        }
-        this.canvas.requestRenderAll();
-        this.updatePropertiesPanel(); // Re-render to show updated controls
-        this.saveCanvasState();
-    }
-
-    /** Generates HTML for gradient color stops for objects. */
-    getGradientStopsHtml(gradient) {
-        if (!gradient || !gradient.colorStops) return '';
-
-        let html = '';
-        gradient.colorStops.forEach((stop, index) => {
-            html += `
-                <div class="property-row gradient-color-row">
-                    <span class="property-label">Color ${index + 1}</span>
-                    <input type="color" class="gradient-color-input" data-stop-index="${index}" value="${this.rgbToHex(stop.color)}">
-                    <input type="range" min="0" max="1" step="0.01" class="gradient-offset-input" data-stop-index="${index}" value="${stop.offset}">
-                    ${gradient.colorStops.length > 2 ? `<button class="gradient-remove-stop-btn" data-stop-index="${index}">&times;</button>` : ''}
-                </div>`;
-        });
-        return html;
-    }
-
-    /** Adds a new gradient stop to an object. */
-    addGradientStop() {
-        const activeObject = this.canvas.getActiveObject();
-        if (!activeObject || typeof activeObject.fill === 'string') return;
-
-        const gradient = activeObject.fill;
-        const newOffset = Math.min(1, Math.max(0, (gradient.colorStops[gradient.colorStops.length - 1].offset + 0.1))); // Example new offset
-        gradient.colorStops.push({ offset: newOffset, color: '#FFFFFF' }); // Default new stop to white
-        gradient.colorStops.sort((a, b) => a.offset - b.offset); // Keep stops ordered by offset
-
-        this.updateObjectFill(activeObject, gradient);
-        this.updatePropertiesPanel(); // Re-render to show new stops
-        this.saveCanvasState();
-    }
-
-    /** Sets up event listeners for dynamically created object gradient stops. */
-    setupGradientStopListeners() {
-        const panel = document.getElementById('properties-panel');
-        if (!panel) return;
-
-        panel.querySelectorAll('.gradient-color-input').forEach(input => {
-            input.onchange = (e) => this.handleGradientChange(e.target, 'color');
-        });
-        panel.querySelectorAll('.gradient-offset-input').forEach(input => {
-            input.onchange = (e) => this.handleGradientChange(e.target, 'offset');
-            input.oninput = (e) => this.handleGradientChange(e.target, 'offset'); // For live update
-        });
-        panel.querySelectorAll('.gradient-remove-stop-btn').forEach(button => {
-            button.onclick = (e) => this.removeGradientStop(parseInt(e.target.dataset.stopIndex));
-        });
-        panel.querySelector('[data-property="gradientType"]')?.addEventListener('change', (e) => this.handleGradientTypeChange(e.target.value));
-    }
-
-    /** Handles changes to object gradient color or offset. */
-    handleGradientChange(input, type) {
-        const activeObject = this.canvas.getActiveObject();
-        if (!activeObject || typeof activeObject.fill === 'string') return;
-
-        const gradient = activeObject.fill;
-        const index = parseInt(input.dataset.stopIndex);
-        if (type === 'color') {
-            gradient.colorStops[index].color = input.value;
-        } else if (type === 'offset') {
-            gradient.colorStops[index].offset = parseFloat(input.value);
-            gradient.colorStops.sort((a, b) => a.offset - b.offset); // Re-sort if offset changed
-        }
-        this.updateObjectFill(activeObject, gradient);
-        this.canvas.requestRenderAll();
-        this.saveCanvasState();
-    }
-
-    /** Handles change in object gradient type (linear/radial). */
-    handleGradientTypeChange(newType) {
-        const activeObject = this.canvas.getActiveObject();
-        if (!activeObject || typeof activeObject.fill === 'string') return;
-
-        const currentGradient = activeObject.fill;
-        currentGradient.type = newType;
-
-        // Recalculate coordinates based on type and object dimensions
-        if (newType === 'linear') {
-            currentGradient.coords = { x1: 0, y1: 0, x2: activeObject.width, y2: 0 };
-        } else if (newType === 'radial') {
-            currentGradient.coords = { x1: activeObject.width / 2, y1: activeObject.height / 2, r1: 0, x2: activeObject.width / 2, y2: activeObject.height / 2, r2: Math.max(activeObject.width, activeObject.height) / 2 };
-        }
-        this.updateObjectFill(activeObject, currentGradient);
-        this.canvas.requestRenderAll();
-        this.saveCanvasState();
-    }
-
-    /** Removes a gradient stop from an object. */
-    removeGradientStop(indexToRemove) {
-        const activeObject = this.canvas.getActiveObject();
-        if (!activeObject || typeof activeObject.fill === 'string') return;
-
-        const gradient = activeObject.fill;
-        if (gradient.colorStops.length <= 2) {
-            this._showMessage('A gradient must have at least two color stops.', 'error');
-            return;
-        }
-        gradient.colorStops.splice(indexToRemove, 1);
-        this.updateObjectFill(activeObject, gradient);
-        this.updatePropertiesPanel(); // Re-render to remove stop from UI
-        this.saveCanvasState();
-    }
-
-    /** Helper to re-apply gradient to an object. */
-    updateObjectFill(obj, gradient) {
-        // Fabric.js requires recreating the gradient object to apply changes
-        const newGradient = new fabric.Gradient(gradient);
-        obj.set('fill', newGradient);
-        obj.dirty = true;
-    }
-
-    /** Toggles between flat color and gradient fill options for the canvas background. */
-    toggleCanvasFillType(type) {
-        const panel = document.getElementById('properties-panel');
-        if (!panel) return;
-
-        const flatOptions = panel.querySelector('.canvas-flat-color-options');
-        const gradientOptions = panel.querySelector('.canvas-gradient-options');
-        const flatToggle = panel.querySelector('.canvas-color-type-toggle .flat-color-toggle');
-        const gradientToggle = panel.querySelector('.canvas-color-type-toggle .gradient-color-toggle');
-
-        flatToggle.classList.remove('active');
-        gradientToggle.classList.remove('active');
-        flatOptions.classList.remove('active');
-        gradientOptions.classList.remove('active');
-
-        if (type === 'flat') {
-            flatToggle.classList.add('active');
-            flatOptions.classList.add('active');
-            this.canvas.backgroundColor = this.options.canvasBackgroundColor || '#FFFFFF'; // Revert to flat color
-        } else {
-            gradientToggle.classList.add('active');
-            gradientOptions.classList.add('active');
-            // Initialize a default linear gradient if not already present
-            if (!this.canvas.backgroundColor || typeof this.canvas.backgroundColor === 'string') {
-                this.canvas.backgroundColor = new fabric.Gradient({
-                    type: 'linear',
-                    coords: { x1: 0, y1: 0, x2: this.canvas.width, y2: 0 },
-                    colorStops: [
-                        { offset: 0, color: this.rgbToHex(this.options.primaryColor) },
-                        { offset: 1, color: this._darkenHex(this.options.primaryColor, 30) }
-                    ]
-                });
-            }
-        }
-        this.canvas.renderAll();
-        // Update the wrapper background to ensure consistency
-        const canvasWrapper = document.querySelector('.bubble-canvas-wrapper');
-        if (canvasWrapper) {
-            canvasWrapper.style.backgroundColor = ''; // Remove solid color if gradient
-            if (typeof this.canvas.backgroundColor === 'object') {
-                // For gradients, the Fabric.js canvas renders it itself, not the wrapper.
-                // We keep the wrapper transparent or a fallback if needed.
-            } else {
-                canvasWrapper.style.backgroundColor = this.canvas.backgroundColor;
-            }
-        }
-        this.updatePropertiesPanel(); // Re-render to show updated controls for canvas
-        this.saveCanvasState();
-    }
-
-    /** Generates HTML for canvas background gradient color stops. */
-    getCanvasGradientStopsHtml(gradient) {
-        if (!gradient || !gradient.colorStops) return '';
-
-        let html = '';
-        gradient.colorStops.forEach((stop, index) => {
-            html += `
-                <div class="property-row canvas-gradient-color-row">
-                    <span class="property-label">Color ${index + 1}</span>
-                    <input type="color" class="canvas-gradient-color-input" data-stop-index="${index}" value="${this.rgbToHex(stop.color)}">
-                    <input type="range" min="0" max="1" step="0.01" class="canvas-gradient-offset-input" data-stop-index="${index}" value="${stop.offset}">
-                    ${gradient.colorStops.length > 2 ? `<button class="canvas-gradient-remove-stop-btn" data-stop-index="${index}">&times;</button>` : ''}
-                </div>`;
-        });
-        return html;
-    }
-
-    /** Adds a new gradient stop to the canvas background. */
-    addCanvasGradientStop() {
-        if (!this.canvas.backgroundColor || typeof this.canvas.backgroundColor === 'string') {
-            this._showMessage('Canvas must have a gradient background to add stops.', 'error');
-            return;
-        }
-
-        const gradient = this.canvas.backgroundColor;
-        const newOffset = Math.min(1, Math.max(0, (gradient.colorStops[gradient.colorStops.length - 1].offset + 0.1))); // Example new offset
-        gradient.colorStops.push({ offset: newOffset, color: '#FFFFFF' }); // Default new stop to white
-        gradient.colorStops.sort((a, b) => a.offset - b.offset); // Keep stops ordered by offset
-
-        this.updateCanvasFill(gradient);
-        this.updatePropertiesPanel(); // Re-render to show new stops
-        this.saveCanvasState();
-    }
-
-    /** Sets up event listeners for dynamically created canvas gradient stops. */
-    setupCanvasGradientStopListeners() {
-        const panel = document.getElementById('properties-panel');
-        if (!panel) return;
-
-        panel.querySelectorAll('.canvas-gradient-color-input').forEach(input => {
-            input.onchange = (e) => this.handleCanvasGradientChange(e.target, 'color');
-        });
-        panel.querySelectorAll('.canvas-gradient-offset-input').forEach(input => {
-            input.onchange = (e) => this.handleCanvasGradientChange(e.target, 'offset');
-            input.oninput = (e) => this.handleCanvasGradientChange(e.target, 'offset'); // For live update
-        });
-        panel.querySelectorAll('.canvas-gradient-remove-stop-btn').forEach(button => {
-            button.onclick = (e) => this.removeCanvasGradientStop(parseInt(e.target.dataset.stopIndex));
-        });
-        panel.querySelector('[data-property="canvasGradientType"]')?.addEventListener('change', (e) => this.handleCanvasGradientTypeChange(e.target.value));
-    }
-
-    /** Handles changes to canvas background gradient color or offset. */
-    handleCanvasGradientChange(input, type) {
-        if (!this.canvas.backgroundColor || typeof this.canvas.backgroundColor === 'string') return;
-
-        const gradient = this.canvas.backgroundColor;
-        const index = parseInt(input.dataset.stopIndex);
-        if (type === 'color') {
-            gradient.colorStops[index].color = input.value;
-        } else if (type === 'offset') {
-            gradient.colorStops[index].offset = parseFloat(input.value);
-            gradient.colorStops.sort((a, b) => a.offset - b.offset); // Re-sort if offset changed
-        }
-        this.updateCanvasFill(gradient);
-        this.canvas.renderAll();
-        this.saveCanvasState();
-    }
-
-    /** Handles change in canvas background gradient type (linear/radial). */
-    handleCanvasGradientTypeChange(newType) {
-        if (!this.canvas.backgroundColor || typeof this.canvas.backgroundColor === 'string') return;
-
-        const currentGradient = this.canvas.backgroundColor;
-        currentGradient.type = newType;
-
-        // Recalculate coordinates based on type and canvas dimensions
-        if (newType === 'linear') {
-            currentGradient.coords = { x1: 0, y1: 0, x2: this.canvas.width, y2: 0 };
-        } else if (newType === 'radial') {
-            currentGradient.coords = { x1: this.canvas.width / 2, y1: this.canvas.height / 2, r1: 0, x2: this.canvas.width / 2, y2: this.canvas.height / 2, r2: Math.max(this.canvas.width, this.canvas.height) / 2 };
-        }
-        this.updateCanvasFill(currentGradient);
-        this.canvas.renderAll();
-        this.saveCanvasState();
-    }
-
-    /** Removes a gradient stop from the canvas background. */
-    removeCanvasGradientStop(indexToRemove) {
-        if (!this.canvas.backgroundColor || typeof this.canvas.backgroundColor === 'string') return;
-
-        const gradient = this.canvas.backgroundColor;
-        if (gradient.colorStops.length <= 2) {
-            this._showMessage('A gradient must have at least two color stops.', 'error');
-            return;
-        }
-        gradient.colorStops.splice(indexToRemove, 1);
-        this.updateCanvasFill(gradient);
-        this.updatePropertiesPanel(); // Re-render to remove stop from UI
-        this.saveCanvasState();
-    }
-
-    /** Helper to re-apply gradient to canvas background. */
-    updateCanvasFill(gradient) {
-        // Fabric.js requires recreating the gradient object to apply changes
-        const newGradient = new fabric.Gradient(gradient);
-        this.canvas.backgroundColor = newGradient;
-    }
-
 
     /** Updates the layers panel. */
     updateLayersPanel() {
@@ -2521,7 +1745,9 @@ class BubbleDesigner {
                     layerIcon = 'fas fa-image';
                     break;
                 case 'icon': // For Font Awesome icons added via element panel
-                    const foundElement = this.elements.find(el => el.type === 'icon' && obj.fontFamily === 'Font Awesome 6 Free' && (obj.text === (this._getIconUnicode(el.name) || obj.text)));
+                    // This iconMap needs to be accessible here or passed in some way.
+                    // For simplicity, let's just use a generic "Icon" name for now, or ensure iconMap is global/class property.
+                    const foundElement = this.elements.find(el => el.type === 'icon' && obj.fontFamily === 'Font Awesome 6 Free' && (obj.text === (this._getIconUnicode(el.name) || obj.text))); // Match by unicode if possible
                     layerName = foundElement ? foundElement.name : 'Icon';
                     layerIcon = foundElement ? foundElement.icon : 'fas fa-star'; 
                     break;
@@ -2618,7 +1844,6 @@ class BubbleDesigner {
                     obj.visible = !obj.visible;
                     this.canvas.renderAll();
                     this.updateLayersPanel();
-                    this.saveCanvasState(); // Save state after visibility change
                     this._showMessage(obj.visible ? `${obj.type} is now visible` : `${obj.type} is now hidden`, 'success');
                 }
             });
@@ -2628,7 +1853,6 @@ class BubbleDesigner {
                 const obj = this.canvas.getObjects().find(o => o.id === objectId);
                 if (obj) {
                     this.canvas.remove(obj);
-                    this.saveCanvasState(); // Save state after deletion
                     this._showMessage(`${obj.type} deleted`, 'success');
                 }
             });
@@ -2660,55 +1884,7 @@ class BubbleDesigner {
     }
     clearPropertiesPanel() {
         const panel = document.getElementById('properties-panel');
-        if (panel) {
-            const isCanvasGradient = this.canvas.backgroundColor && typeof this.canvas.backgroundColor === 'object';
-            panel.innerHTML = `
-                <div class="property-group">
-                    <h4>Canvas Properties</h4>
-                    <div class="canvas-color-type-toggle">
-                        <button class="flat-color-toggle ${!isCanvasGradient ? 'active' : ''}" data-canvas-color-type="flat">Flat Color</button>
-                        <button class="gradient-color-toggle ${isCanvasGradient ? 'active' : ''}" data-canvas-color-type="gradient">Gradient</button>
-                    </div>
-                    <div class="canvas-flat-color-options ${!isCanvasGradient ? 'active' : ''}">
-                        <div class="property-row">
-                            <span class="property-label">Background</span>
-                            <input type="color" class="property-input" data-property="canvasBackgroundColor" value="${this.rgbToHex(this.canvas.backgroundColor && typeof this.canvas.backgroundColor === 'string' ? this.canvas.backgroundColor : (this.options.canvasBackgroundColor || '#FFFFFF'))}">
-                        </div>
-                    </div>
-                    <div class="canvas-gradient-options ${isCanvasGradient ? 'active' : ''}">
-                        <div class="property-row">
-                            <span class="property-label">Type</span>
-                            <select class="property-input" data-property="canvasGradientType">
-                                <option value="linear" ${this.canvas.backgroundColor?.type === 'linear' ? 'selected' : ''}>Linear</option>
-                                <option value="radial" ${this.canvas.backgroundColor?.type === 'radial' ? 'selected' : ''}>Radial</option>
-                            </select>
-                        </div>
-                        <div id="canvas-gradient-stops-container">
-                            ${this.getCanvasGradientStopsHtml(this.canvas.backgroundColor)}
-                        </div>
-                        <button class="canvas-gradient-add-stop-btn">Add Stop</button>
-                    </div>
-                    <div class="property-row">
-                        <span class="property-label">Width</span>
-                        <input type="number" class="property-input" data-property="canvasWidth" value="${this.canvas.width}">
-                    </div>
-                    <div class="property-row">
-                        <span class="property-label">Height</span>
-                        <input type="number" class="property-input" data-property="canvasHeight" value="${this.canvas.height}">
-                    </div>
-                </div>
-            `;
-            // Add listeners for canvas properties
-            panel.querySelector('[data-property="canvasBackgroundColor"]')?.addEventListener('change', this.handleCanvasPropertyChange.bind(this));
-            panel.querySelector('[data-property="canvasWidth"]')?.addEventListener('change', this.handleCanvasPropertyChange.bind(this));
-            panel.querySelector('[data-property="canvasHeight"]')?.addEventListener('change', this.handleCanvasPropertyChange.bind(this));
-
-            // Listeners for canvas color/gradient toggle
-            panel.querySelector('.canvas-color-type-toggle .flat-color-toggle')?.addEventListener('click', () => this.toggleCanvasFillType('flat'));
-            panel.querySelector('.canvas-color-type-toggle .gradient-color-toggle')?.addEventListener('click', () => this.toggleCanvasFillType('gradient'));
-            panel.querySelector('.canvas-gradient-add-stop-btn')?.addEventListener('click', this.addCanvasGradientStop.bind(this));
-            this.setupCanvasGradientStopListeners(); // Setup listeners for gradient stops
-        }
+        if (panel) { panel.innerHTML = '<p style="text-align:center; color:#b3b3c6; padding-top:20px;">Select an element to edit its properties</p>'; }
     }
     getFontDropdown(property, current) {
         // Extended list of web-safe fonts and popular Google Fonts (assuming they are loaded via link in head)
@@ -2730,30 +1906,18 @@ class BubbleDesigner {
         const activeObject = this.canvas.getActiveObject();
         if (!activeObject) return;
 
-        // No longer need shouldSaveState flag here, as Fabric.js event listeners handle it.
-
         if (property === 'width') {
             if (activeObject.type === 'circle') { activeObject.set('radius', parseFloat(value) / 2); }
-            else { activeObject.set('scaleX', parseFloat(value) / (activeObject.width / (activeObject.scaleX || 1))); }
+            else { activeObject.set('scaleX', parseFloat(value) / (activeObject.width / activeObject.scaleX)); }
         }
         else if (property === 'height') {
              if (activeObject.type === 'circle') { activeObject.set('radius', parseFloat(value) / 2); }
-            else { activeObject.set('scaleY', parseFloat(value) / (activeObject.height / (activeObject.scaleY || 1))); }
+            else { activeObject.set('scaleY', parseFloat(value) / (activeObject.height / activeObject.scaleY)); }
         }
         else if (property === 'padding') { activeObject.set('padding', parseFloat(value)); }
         else if (property === 'left' || property === 'top' || property === 'angle' || property === 'opacity' || property === 'fontSize' || property === 'strokeWidth') { activeObject.set(property, parseFloat(value)); }
         else if (property === 'scaleX' || property === 'scaleY') { activeObject.set(property, parseFloat(value)); }
-        else if (property === 'fill' || property === 'stroke' || property === 'fontFamily' || property === 'text' || property === 'textAlign') {
-            // Special handling for fill when it's a flat color from the picker
-            if (property === 'fill' && typeof activeObject.fill === 'object' && activeObject.fill !== null && activeObject.fill.type) {
-                // If it was a gradient, but now a flat color is being applied from the picker
-                activeObject.set('fill', value);
-                // After changing to flat color, re-render properties panel to show flat color options
-                this.updatePropertiesPanel(); // Re-render to update UI for fill type
-            } else {
-                activeObject.set(property, value);
-            }
-        }
+        else if (property === 'fill' || property === 'stroke' || property === 'fontFamily' || property === 'text' || property === 'textAlign') { activeObject.set(property, value); }
         else if (property === 'lockMovement') { activeObject.set({ lockMovementX: value, lockMovementY: value }); }
         else if (property === 'lockScaling') { activeObject.set({ lockScalingX: value, lockScalingY: value }); }
 
@@ -2773,8 +1937,8 @@ class BubbleDesigner {
             activeObject.setCoords();
         }
         this.canvas.requestRenderAll();
-        // Fabric.js 'object:modified' event will trigger saveCanvasState,
-        // so no need to explicitly call it here for every input/change.
+        // No need to update properties panel on every input event, only on change or selection.
+        // this.updatePropertiesPanel();
     }
 
     // --- CONTEXT MENU AND KEYBOARD SHORTCUT METHODS ---
@@ -2840,7 +2004,6 @@ class BubbleDesigner {
             case 'send-backward': this.sendObjectBackward(); break;
             default: console.warn(`Unknown context action: ${action}`);
         }
-        // saveCanvasState is triggered by object:modified/added/removed events
     }
     /** Deletes the currently active object. */
     deleteActiveObject() {
@@ -2921,7 +2084,6 @@ class BubbleDesigner {
             activeObject.setCoords(); // Update object controls and bounding box
             this.canvas.requestRenderAll(); // Request a canvas re-render
             this.updatePropertiesPanel(); // Refresh properties panel to show new styles
-            this.saveCanvasState(); // Save state after pasting style
             this._showMessage('Style pasted', 'success');
         } else {
             console.warn("No active object or no style copied to paste.");
@@ -2933,10 +2095,12 @@ class BubbleDesigner {
         console.log("Attempting to bring object forward...");
         const activeObject = this.canvas.getActiveObject();
         if (activeObject) {
+            const initialIndex = this.canvas.getObjects().indexOf(activeObject);
             activeObject.bringForward(); // Moves one step forward in stack
+            const newIndex = this.canvas.getObjects().indexOf(activeObject);
+            console.log(`Object moved forward from index ${initialIndex} to ${newIndex}.`);
             this.canvas.renderAll();
             this.updateLayersPanel(); // Update layer order in panel
-            this.saveCanvasState(); // Save state after reordering
             this._showMessage(`Moved ${activeObject.type} forward`, 'success');
         } else {
             console.warn("No active object to bring forward.");
@@ -2948,10 +2112,12 @@ class BubbleDesigner {
         console.log("Attempting to send object backward...");
         const activeObject = this.canvas.getActiveObject();
         if (activeObject) {
+            const initialIndex = this.canvas.getObjects().indexOf(activeObject);
             activeObject.sendBackwards(); // Moves one step backward in stack
+            const newIndex = this.canvas.getObjects().indexOf(activeObject);
+            console.log(`Object moved backward from index ${initialIndex} to ${newIndex}.`);
             this.canvas.renderAll();
             this.updateLayersPanel(); // Update layer order in panel
-            this.saveCanvasState(); // Save state after reordering
             this._showMessage(`Moved ${activeObject.type} backward`, 'success');
         } else {
             console.warn("No active object to send backward.");
@@ -2968,7 +2134,6 @@ class BubbleDesigner {
             console.log("Object brought to front.");
             this.canvas.renderAll();
             this.updateLayersPanel();
-            this.saveCanvasState(); // Save state after reordering
             this._showMessage(`Moved ${activeObject.type} to front`, 'success');
         } else {
             console.warn("No active object to bring to front.");
@@ -2985,7 +2150,6 @@ class BubbleDesigner {
             console.log("Object sent to back.");
             this.canvas.renderAll();
             this.updateLayersPanel();
-            this.saveCanvasState(); // Save state after reordering
             this._showMessage(`Moved ${activeObject.type} to back`, 'success');
         } else {
             console.warn("No active object to send to back.");
@@ -3006,10 +2170,7 @@ class BubbleDesigner {
         else if (isCtrlCmd && e.key === 'd') { this.duplicateObject(); e.preventDefault(); }
         else if (isCtrlCmd && e.altKey && e.key === 'c') { this.copyObjectStyle(); e.preventDefault(); }
         else if (isCtrlCmd && e.altKey && e.key === 'v') { this.pasteObjectStyle(); e.preventDefault(); }
-        else if (isCtrlCmd && e.key === 'z') { this.undo(); e.preventDefault(); } // Undo
-        else if (isCtrlCmd && e.key === 'y') { this.redo(); e.preventDefault(); } // Redo
     }
-
     /** Duplicates the active object. */
     duplicateObject() {
         console.log("Duplicating object...");
@@ -3028,227 +2189,7 @@ class BubbleDesigner {
             this._showMessage('No object selected to duplicate', 'error');
         }
     }
-
-    // --- Undo/Redo Methods ---
-    /** Saves the current canvas state to history. */
-    saveCanvasState() {
-        if (this.isUndoing || this.isRedoing) return; // Don't save state during undo/redo operations
-
-        // Serialize canvas to JSON, including background color (which can be a gradient)
-        const json = JSON.stringify(this.canvas.toJSON(STYLES_TO_COPY.concat(['backgroundColor']))); // Ensure backgroundColor is serialized
-        
-        if (this.historyPointer < this.history.length - 1) {
-            this.history = this.history.slice(0, this.historyPointer + 1); // Truncate redo history
-        }
-        this.history.push(json);
-        this.historyPointer = this.history.length - 1;
-        this.updateUndoRedoButtons();
-        console.log('Canvas state saved. History length:', this.history.length, 'Pointer:', this.historyPointer);
-        
-        // Auto-save to localStorage
-        this.saveToLocalStorage();
-    }
-    
-    /** Saves the current canvas state to localStorage */
-    saveToLocalStorage() {
-        try {
-            // Get the current canvas state with all necessary properties
-            const additionalProps = ['id', 'selectable', 'evented', 'text', 'fontSize', 'fontFamily', 
-                'fontWeight', 'fontStyle', 'textAlign', 'lineHeight', 'underline', 'overline', 
-                'linethrough', 'charSpacing', 'angle', 'opacity', 'scaleX', 'scaleY', 'flipX', 'flipY', 
-                'skewX', 'skewY', 'originX', 'originY', 'src', 'crossOrigin', 'filters'];
-            
-            const canvasState = this.canvas.toJSON(STYLES_TO_COPY.concat(['backgroundColor']).concat(additionalProps));
-            
-            // Save to localStorage
-            localStorage.setItem('bubbleDesignerState', JSON.stringify(canvasState));
-            console.log('Canvas state auto-saved to localStorage with enhanced properties');
-        } catch (error) {
-            console.error('Failed to auto-save canvas state to localStorage:', error);
-        }
-    }
-    
-    /** Loads the canvas state from localStorage if available */
-    loadFromLocalStorage() {
-        try {
-            const savedState = localStorage.getItem('bubbleDesignerState');
-            if (savedState) {
-                const canvasState = JSON.parse(savedState);
-                
-                // Enhanced loading with proper object restoration
-                this.canvas.loadFromJSON(canvasState, () => {
-                    // Process each object to ensure proper rendering
-                    this.canvas.getObjects().forEach(obj => {
-                        // Mark objects as loaded from storage to prevent repositioning
-                        obj._loadedFromStorage = true;
-                        
-                        // Preserve exact position and properties for all objects
-                        obj.set({
-                            selectable: true,
-                            evented: true,
-                            // Explicitly preserve left and top positions
-                            left: obj.left,
-                            top: obj.top,
-                            // Preserve scaling
-                            scaleX: obj.scaleX,
-                            scaleY: obj.scaleY,
-                            // Preserve angle/rotation
-                            angle: obj.angle,
-                            // Preserve origin points
-                            originX: obj.originX || 'center',
-                            originY: obj.originY || 'center'
-                        });
-                        
-                        // Special handling for text objects
-                        if (obj.type === 'i-text' || obj.type === 'text') {
-                            // Ensure text properties are preserved
-                            obj.set({
-                                fontFamily: obj.fontFamily,
-                                fontSize: obj.fontSize,
-                                fontWeight: obj.fontWeight,
-                                fontStyle: obj.fontStyle,
-                                textAlign: obj.textAlign,
-                                lineHeight: obj.lineHeight,
-                                underline: obj.underline,
-                                overline: obj.overline,
-                                linethrough: obj.linethrough,
-                                charSpacing: obj.charSpacing
-                            });
-                        }
-                        
-                        // Special handling for stickers (emoji)
-                        if (obj.type === 'sticker' || (obj.type === 'text' && obj.text && obj.text.match(/[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u))) {
-                            obj.set({
-                                editable: false,
-                                // Ensure stickers keep their exact position
-                                left: obj.left,
-                                top: obj.top
-                            });
-                        }
-                        
-                        // Special handling for images
-                        if (obj.type === 'image') {
-                            // Force crossOrigin setting if needed
-                            if (obj.crossOrigin !== 'anonymous') {
-                                obj.crossOrigin = 'anonymous';
-                            }
-                        }
-                        
-                        // Force update coordinates to ensure proper positioning
-                        obj.setCoords();
-                    });
-                    
-                    this.canvas.renderAll();
-                    this.updateLayersPanel();
-                    this._showMessage('Previous design loaded successfully!', 'success');
-                    console.log('Canvas state loaded from localStorage with precise position preservation');
-                    
-                    // Update the wrapper's background color if canvas background changed
-                    const canvasWrapper = document.querySelector('.bubble-canvas-wrapper');
-                    if (canvasWrapper) {
-                        if (typeof this.canvas.backgroundColor === 'string' || this.canvas.backgroundColor === null) {
-                            canvasWrapper.style.backgroundColor = this.canvas.backgroundColor || '';
-                        } else {
-                            canvasWrapper.style.backgroundColor = ''; // Clear if it's a gradient, as canvas handles it
-                        }
-                    }
-                    
-                    // Save initial state to history after loading
-                    this.history = [];
-                    this.historyPointer = -1;
-                    this.saveCanvasState();
-                });
-                return true;
-            }
-            return false;
-        } catch (error) {
-            console.error('Failed to load canvas state from localStorage:', error);
-            return false;
-        }
-    }
-
-    /** Updates the enabled/disabled state of Undo/Redo buttons. */
-    updateUndoRedoButtons() {
-        const undoBtn = document.getElementById('undoBtn');
-        const redoBtn = document.getElementById('redoBtn');
-        if (undoBtn) undoBtn.disabled = this.historyPointer <= 0;
-        if (redoBtn) redoBtn.disabled = this.historyPointer >= this.history.length - 1;
-    }
-
-    /** Undoes the last action. */
-    undo() {
-        if (this.historyPointer <= 0) {
-            this._showMessage('Nothing to undo!', 'info');
-            return;
-        }
-
-        this.isUndoing = true;
-        this.historyPointer--;
-        const state = this.history[this.historyPointer];
-
-        this.canvas.loadFromJSON(state, () => {
-            this.canvas.renderAll();
-            this.canvas.discardActiveObject(); // Clear selection after undo
-            this.updateLayersPanel();
-            this.updatePropertiesPanel(); // Re-render to reflect new canvas background or object props
-            this.updateUndoRedoButtons();
-            this.isUndoing = false;
-            
-            // Update the wrapper's background color if canvas background changed
-            const canvasWrapper = document.querySelector('.bubble-canvas-wrapper');
-            if (canvasWrapper) {
-                if (typeof this.canvas.backgroundColor === 'string' || this.canvas.backgroundColor === null) {
-                    canvasWrapper.style.backgroundColor = this.canvas.backgroundColor || '';
-                } else {
-                    canvasWrapper.style.backgroundColor = ''; // Clear if it's a gradient, as canvas handles it
-                }
-            }
-
-            this._showMessage('Undo successful!', 'success');
-            console.log('Undo performed. History length:', this.history.length, 'Pointer:', this.historyPointer);
-        });
-    }
-
-    /** Redoes the last undone action. */
-    redo() {
-        if (this.historyPointer >= this.history.length - 1) {
-            this._showMessage('Nothing to redo!', 'info');
-            return;
-        }
-
-        this.isRedoing = true;
-        this.historyPointer++;
-        const state = this.history[this.historyPointer];
-
-        this.canvas.loadFromJSON(state, () => {
-            this.canvas.renderAll();
-            this.canvas.discardActiveObject(); // Clear selection after redo
-            this.updateLayersPanel();
-            this.updatePropertiesPanel(); // Re-render to reflect new canvas background or object props
-            this.updateUndoRedoButtons();
-            this.isRedoing = false;
-
-            // Update the wrapper's background color if canvas background changed
-            const canvasWrapper = document.querySelector('.bubble-canvas-wrapper');
-            if (canvasWrapper) {
-                if (typeof this.canvas.backgroundColor === 'string' || this.canvas.backgroundColor === null) {
-                    canvasWrapper.style.backgroundColor = this.canvas.backgroundColor || '';
-                } else {
-                    canvasWrapper.style.backgroundColor = ''; // Clear if it's a gradient, as canvas handles it
-                }
-            }
-            this._showMessage('Redo successful!', 'success');
-            console.log('Redo performed. History length:', this.history.length, 'Pointer:', this.historyPointer);
-        });
-    }
-    // --- End Undo/Redo Methods ---
 } // End of BubbleDesigner class
 
 // This is required so that Bubble can use the class from your file.
 window.BubbleDesigner = BubbleDesigner;
-window.addEventListener('DOMContentLoaded', function() {
-    if (!window.BubbleDesignerInstance) { // Prevent re-initialization if Bubble already did it
-        window.BubbleDesignerInstance = new BubbleDesigner();
-    }
- });
-
