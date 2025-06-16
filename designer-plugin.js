@@ -3247,5 +3247,3 @@ class BubbleDesigner {
 // This is required so that Bubble can use the class from your file.
 window.BubbleDesigner = BubbleDesigner;
 
-    }
- });
