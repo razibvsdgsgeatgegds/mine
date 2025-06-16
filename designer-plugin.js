@@ -3246,4 +3246,9 @@ class BubbleDesigner {
 
 // This is required so that Bubble can use the class from your file.
 window.BubbleDesigner = BubbleDesigner;
+window.addEventListener('DOMContentLoaded', function() {
+    if (!window.BubbleDesignerInstance) { // Prevent re-initialization if Bubble already did it
+        window.BubbleDesignerInstance = new BubbleDesigner();
+    }
+ });
 
